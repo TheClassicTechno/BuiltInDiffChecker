@@ -1,0 +1,4 @@
+node_modules/
+.diffcheck/
+dist/
+*.log

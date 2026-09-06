@@ -1,0 +1,21 @@
+{
+  "name": "diffcheck",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-first diff and iteration-tracking tool for AI-assisted coding workflows.",
+  "bin": {
+    "diffcheck": "./src/cli.ts"
+  },
+  "scripts": {
+    "test": "node --test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.2"
+  },
+  "engines": {
+    "node": ">=23.6.0"
+  }
+}
