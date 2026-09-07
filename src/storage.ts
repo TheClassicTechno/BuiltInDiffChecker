@@ -1,4 +1,4 @@
-import { mkdir, writeFile, rename } from "node:fs/promises";
+import { mkdir, writeFile, rename, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import type { Checkpoint } from "./types.ts";
 
@@ -20,4 +20,35 @@ export async function writeCheckpoint(toplevel: string, checkpoint: Checkpoint):
 
   await writeFile(tmpPath, JSON.stringify(checkpoint, null, 2), "utf8");
   await rename(tmpPath, finalPath);
+}
+
+/**
+ * Lists all persisted checkpoints, sorted by createdAt ascending. No
+ * separate index/manifest file is used — the directory listing is the
+ * source of truth, per DESIGN.md §3.
+ */
+export async function listCheckpoints(toplevel: string): Promise<Checkpoint[]> {
+  const dir = checkpointsDir(toplevel);
+  let entries: string[];
+  try {
+    entries = await readdir(dir);
+  } catch {
+    return [];
+  }
+
+  const checkpoints = await Promise.all(
+    entries
+      .filter((entry) => entry.endsWith(".json"))
+      .map(async (entry) => {
+        const raw = await readFile(path.join(dir, entry), "utf8");
+        return JSON.parse(raw) as Checkpoint;
+      }),
+  );
+
+  return checkpoints.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export async function readCheckpoint(toplevel: string, id: string): Promise<Checkpoint> {
+  const raw = await readFile(path.join(checkpointsDir(toplevel), `${id}.json`), "utf8");
+  return JSON.parse(raw) as Checkpoint;
 }
