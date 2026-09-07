@@ -125,6 +125,39 @@ async function runCompare(args: string[]): Promise<number> {
   return 0;
 }
 
+async function runShow(args: string[]): Promise<number> {
+  const { values, positionals } = parseArgs({
+    args,
+    options: { json: { type: "boolean" } },
+    allowPositionals: true,
+  });
+
+  const ref = positionals[0];
+  if (!ref) {
+    process.stderr.write("Usage: diffcheck show <checkpoint-ref> | diffcheck show <ref1>..<ref2>\n");
+    return 1;
+  }
+
+  if (ref.includes("..")) {
+    const [fromRef, toRef] = ref.split("..", 2);
+    return runCompare([fromRef!, toRef!, ...(values.json ? ["--json"] : [])]);
+  }
+
+  const { toplevel } = await detectRepo(process.cwd());
+  const checkpoints = await listCheckpoints(toplevel);
+  const checkpoint = resolveCheckpointRef(checkpoints, ref);
+
+  if (values.json) {
+    process.stdout.write(`${JSON.stringify(checkpoint, null, 2)}\n`);
+  } else {
+    process.stdout.write(`${checkpoint.id}\t${checkpoint.createdAt}\t${checkpoint.name}\n`);
+    if (checkpoint.note) {
+      process.stdout.write(`note: ${checkpoint.note}\n`);
+    }
+  }
+  return 0;
+}
+
 async function main(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
 
@@ -135,11 +168,15 @@ async function main(argv: string[]): Promise<number> {
       return runList(rest);
     case "compare":
       return runCompare(rest);
+    case "latest":
+      return runCompare(["latest", "working", ...rest]);
+    case "show":
+      return runShow(rest);
     case undefined:
     case "--help":
     case "-h":
       process.stdout.write(
-        "Usage: diffcheck <command> [options]\n\nCommands:\n  checkpoint <name> [--note <text>]\n  list\n  compare <from> <to> [--json] [--ignore-whitespace]\n",
+        "Usage: diffcheck <command> [options]\n\nCommands:\n  checkpoint <name> [--note <text>]\n  list [--json]\n  compare <from> <to> [--json] [--ignore-whitespace]\n  latest [--json] [--ignore-whitespace]\n  show <ref> | <ref1>..<ref2> [--json]\n",
       );
       return command === undefined ? 1 : 0;
     default:
