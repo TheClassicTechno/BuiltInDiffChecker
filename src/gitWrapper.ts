@@ -78,3 +78,12 @@ export async function commitTree(
   args.push("-m", message);
   return (await runGit(toplevel, args)).trim();
 }
+
+/**
+ * Pins a checkpoint commit against garbage collection via a ref outside
+ * refs/heads and refs/tags, so it never appears in normal branch/tag
+ * listings. See DESIGN.md §3.
+ */
+export async function updateCheckpointRef(toplevel: string, id: string, commitSha: string): Promise<void> {
+  await runGit(toplevel, ["update-ref", `refs/diffcheck/checkpoints/${id}`, commitSha]);
+}
