@@ -89,3 +89,33 @@ export function parseNumstat(raw: string): NumstatEntry[] {
 
   return results;
 }
+
+/**
+ * Splits a full `git diff` (non -z) into one chunk per file, in the same
+ * order git printed them — the same order name-status/numstat report, so
+ * callers zip by position rather than parsing paths back out of headers
+ * (which would need to undo core.quotepath quoting for no benefit).
+ * chunks.join("\n") reproduces the input exactly (lossless).
+ */
+export function splitUnifiedDiffByFile(raw: string): string[] {
+  if (raw === "") {
+    return [];
+  }
+
+  const lines = raw.split("\n");
+  const chunks: string[] = [];
+  let current: string[] = [];
+
+  for (const line of lines) {
+    if (line.startsWith("diff --git ") && current.length > 0) {
+      chunks.push(current.join("\n"));
+      current = [];
+    }
+    current.push(line);
+  }
+  if (current.length > 0) {
+    chunks.push(current.join("\n"));
+  }
+
+  return chunks;
+}
