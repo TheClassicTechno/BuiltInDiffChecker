@@ -106,13 +106,14 @@ async function runCompare(args: string[]): Promise<number> {
   const { toplevel, hasHead } = await detectRepo(process.cwd());
   const checkpoints = await listCheckpoints(toplevel);
   const from = resolveCheckpointRef(checkpoints, fromRef);
+  const extraFlags = values["ignore-whitespace"] ? ["-w"] : [];
 
   let comparison: Comparison;
   if (toRef === "working") {
-    comparison = await compareAgainstWorking(toplevel, hasHead, from);
+    comparison = await compareAgainstWorking(toplevel, hasHead, from, extraFlags);
   } else {
     const to = resolveCheckpointRef(checkpoints, toRef);
-    const raw = await diffCommits(toplevel, from.commitSha, to.commitSha);
+    const raw = await diffCommits(toplevel, from.commitSha, to.commitSha, extraFlags);
     comparison = buildComparison(from, to, raw);
   }
 

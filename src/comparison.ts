@@ -47,9 +47,10 @@ export async function compareAgainstWorking(
   toplevel: string,
   hasHead: boolean,
   from: Checkpoint,
+  extraFlags: string[] = [],
 ): Promise<Comparison> {
   const treeSha = await buildTree(toplevel, hasHead);
-  const raw = await diffCommits(toplevel, from.commitSha, treeSha);
+  const raw = await diffCommits(toplevel, from.commitSha, treeSha, extraFlags);
 
   const working: Checkpoint = {
     id: "working",
