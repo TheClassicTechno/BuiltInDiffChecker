@@ -38,3 +38,28 @@ test("createCheckpoint creates, persists, and pins a checkpoint", async () => {
     await repo.cleanup();
   }
 });
+
+test("creating a second checkpoint after a modification produces a distinct id/commit reflecting the change", async () => {
+  const repo = await createTempRepo();
+  try {
+    await writeFile(path.join(repo.path, "a.txt"), "one\n");
+    await git(repo.path, ["add", "a.txt"]);
+    await git(repo.path, ["commit", "-m", "initial"]);
+
+    const before = await createCheckpoint(repo.path, "before task");
+
+    await writeFile(path.join(repo.path, "a.txt"), "two\n");
+    const after = await createCheckpoint(repo.path, "after task");
+
+    assert.notEqual(before.id, after.id);
+    assert.notEqual(before.commitSha, after.commitSha);
+    assert.equal(after.parentCheckpointId, before.id);
+
+    const afterContent = await git(repo.path, ["show", `${after.commitSha}:a.txt`]);
+    assert.equal(afterContent, "two\n");
+    const beforeContent = await git(repo.path, ["show", `${before.commitSha}:a.txt`]);
+    assert.equal(beforeContent, "one\n");
+  } finally {
+    await repo.cleanup();
+  }
+});
