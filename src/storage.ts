@@ -52,3 +52,20 @@ export async function readCheckpoint(toplevel: string, id: string): Promise<Chec
   const raw = await readFile(path.join(checkpointsDir(toplevel), `${id}.json`), "utf8");
   return JSON.parse(raw) as Checkpoint;
 }
+
+/**
+ * Whether the repo's .gitignore already has a line covering .diffcheck/.
+ * Intentionally simple (exact-line match, not a full gitignore pattern
+ * matcher) — good enough to decide whether to print a one-time suggestion,
+ * never used to decide what's actually excluded from checkpoint content
+ * (buildTree's unconditional exclusion, DESIGN.md §3, is the real guard).
+ */
+export async function isDiffcheckGitignored(toplevel: string): Promise<boolean> {
+  let content: string;
+  try {
+    content = await readFile(path.join(toplevel, ".gitignore"), "utf8");
+  } catch {
+    return false;
+  }
+  return content.split("\n").some((line) => line.trim().replace(/\/$/, "") === ".diffcheck");
+}

@@ -2,7 +2,7 @@ import { parseArgs } from "node:util";
 import { createCheckpoint } from "./checkpoint.ts";
 import { detectRepo, diffCommits } from "./gitWrapper.ts";
 import { buildComparison, compareAgainstWorking } from "./comparison.ts";
-import { listCheckpoints } from "./storage.ts";
+import { listCheckpoints, isDiffcheckGitignored } from "./storage.ts";
 import { DiffCheckError } from "./errors.ts";
 import type { Checkpoint, Comparison } from "./types.ts";
 
@@ -66,8 +66,18 @@ async function runCheckpoint(args: string[]): Promise<number> {
     return 1;
   }
 
+  const { toplevel } = await detectRepo(process.cwd());
+  const isFirstCheckpoint = (await listCheckpoints(toplevel)).length === 0;
+
   const checkpoint = await createCheckpoint(process.cwd(), name, values.note);
   process.stdout.write(`${checkpoint.id}\n`);
+
+  if (isFirstCheckpoint && !(await isDiffcheckGitignored(toplevel))) {
+    process.stderr.write(
+      "Note: .diffcheck/ is not listed in your .gitignore. Consider adding it so checkpoint metadata never shows up in `git status`.\n",
+    );
+  }
+
   return 0;
 }
 
