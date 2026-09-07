@@ -59,3 +59,22 @@ export async function buildTree(toplevel: string, hasHead: boolean): Promise<str
     await rm(scratchDir, { recursive: true, force: true });
   }
 }
+
+/**
+ * Creates a commit object wrapping treeSha, optionally linked to a parent
+ * checkpoint commit for future traversal. Never attaches to HEAD or any
+ * branch ref. See DESIGN.md §4 step 5.
+ */
+export async function commitTree(
+  toplevel: string,
+  treeSha: string,
+  message: string,
+  parentCommitSha?: string,
+): Promise<string> {
+  const args = ["commit-tree", treeSha];
+  if (parentCommitSha) {
+    args.push("-p", parentCommitSha);
+  }
+  args.push("-m", message);
+  return (await runGit(toplevel, args)).trim();
+}
