@@ -1,5 +1,5 @@
 import { parseNameStatus, parseNumstat, splitUnifiedDiffByFile } from "./diffParser.ts";
-import type { RawDiff } from "./gitWrapper.ts";
+import { buildTree, diffCommits, type RawDiff } from "./gitWrapper.ts";
 import type { Checkpoint, Comparison, FileChange } from "./types.ts";
 
 /**
@@ -33,4 +33,30 @@ export function buildComparison(from: Checkpoint, to: Checkpoint, raw: RawDiff):
   const totalDeletions = files.reduce((sum, f) => sum + (f.deletions ?? 0), 0);
 
   return { from, to, files, totalAdditions, totalDeletions, rawDiff: raw.fullDiffRaw };
+}
+
+/**
+ * Compares a checkpoint against the current live working tree (staged +
+ * unstaged + untracked-non-ignored), by snapshotting the working tree into
+ * an ephemeral, unpinned tree object and diffing against that — reusing
+ * buildTree rather than a separate "diff vs. working tree" code path.
+ * The synthetic "to" checkpoint is not persisted. See DESIGN.md §4/§7
+ * ("latest"/"working" mode).
+ */
+export async function compareAgainstWorking(
+  toplevel: string,
+  hasHead: boolean,
+  from: Checkpoint,
+): Promise<Comparison> {
+  const treeSha = await buildTree(toplevel, hasHead);
+  const raw = await diffCommits(toplevel, from.commitSha, treeSha);
+
+  const working: Checkpoint = {
+    id: "working",
+    name: "(working tree)",
+    createdAt: new Date().toISOString(),
+    commitSha: treeSha,
+  };
+
+  return buildComparison(from, working, raw);
 }
