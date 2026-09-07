@@ -1,5 +1,7 @@
 import { parseArgs } from "node:util";
 import { createCheckpoint } from "./checkpoint.ts";
+import { detectRepo } from "./gitWrapper.ts";
+import { listCheckpoints } from "./storage.ts";
 import { DiffCheckError } from "./errors.ts";
 
 async function runCheckpoint(args: string[]): Promise<number> {
@@ -22,16 +24,29 @@ async function runCheckpoint(args: string[]): Promise<number> {
   return 0;
 }
 
+async function runList(): Promise<number> {
+  const { toplevel } = await detectRepo(process.cwd());
+  const checkpoints = await listCheckpoints(toplevel);
+  for (const checkpoint of checkpoints) {
+    process.stdout.write(`${checkpoint.id}\t${checkpoint.createdAt}\t${checkpoint.name}\n`);
+  }
+  return 0;
+}
+
 async function main(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
 
   switch (command) {
     case "checkpoint":
       return runCheckpoint(rest);
+    case "list":
+      return runList();
     case undefined:
     case "--help":
     case "-h":
-      process.stdout.write("Usage: diffcheck <command> [options]\n\nCommands:\n  checkpoint <name> [--note <text>]\n");
+      process.stdout.write(
+        "Usage: diffcheck <command> [options]\n\nCommands:\n  checkpoint <name> [--note <text>]\n  list\n",
+      );
       return command === undefined ? 1 : 0;
     default:
       process.stderr.write(`Unknown command: ${command}\n`);
