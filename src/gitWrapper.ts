@@ -89,3 +89,29 @@ export async function commitTree(
 export async function updateCheckpointRef(toplevel: string, id: string, commitSha: string): Promise<void> {
   await runGit(toplevel, ["update-ref", `refs/diffcheck/checkpoints/${id}`, commitSha]);
 }
+
+export interface RawDiff {
+  nameStatusRaw: string;
+  numstatRaw: string;
+  fullDiffRaw: string;
+}
+
+/**
+ * Diffs two commit-ish objects using Git's own diff engine directly, so
+ * rename/binary detection and line counts are exactly what real `git diff`
+ * reports. See DESIGN.md §4 (compare steps).
+ */
+export async function diffCommits(
+  toplevel: string,
+  from: string,
+  to: string,
+  extraFlags: string[] = [],
+): Promise<RawDiff> {
+  const base = ["diff", "--no-color", "-M", ...extraFlags];
+  const [nameStatusRaw, numstatRaw, fullDiffRaw] = await Promise.all([
+    runGit(toplevel, [...base, "-z", "--name-status", from, to]),
+    runGit(toplevel, [...base, "-z", "--numstat", from, to]),
+    runGit(toplevel, [...base, from, to]),
+  ]);
+  return { nameStatusRaw, numstatRaw, fullDiffRaw };
+}
