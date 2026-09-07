@@ -53,6 +53,8 @@ export async function buildTree(toplevel: string, hasHead: boolean): Promise<str
       await runGit(toplevel, ["read-tree", "HEAD"], env);
     }
     await runGit(toplevel, ["add", "-A", "--", "."], env);
+    // Always excluded, regardless of the user's own .gitignore state — see DESIGN.md §3.
+    await runGit(toplevel, ["rm", "--cached", "--ignore-unmatch", "-r", "-q", "--", ".diffcheck"], env);
     const treeSha = (await runGit(toplevel, ["write-tree"], env)).trim();
     return treeSha;
   } finally {
