@@ -71,11 +71,18 @@ async function runCheckpoint(args: string[]): Promise<number> {
   return 0;
 }
 
-async function runList(): Promise<number> {
+async function runList(args: string[]): Promise<number> {
+  const { values } = parseArgs({ args, options: { json: { type: "boolean" } } });
+
   const { toplevel } = await detectRepo(process.cwd());
   const checkpoints = await listCheckpoints(toplevel);
-  for (const checkpoint of checkpoints) {
-    process.stdout.write(`${checkpoint.id}\t${checkpoint.createdAt}\t${checkpoint.name}\n`);
+
+  if (values.json) {
+    process.stdout.write(`${JSON.stringify(checkpoints, null, 2)}\n`);
+  } else {
+    for (const checkpoint of checkpoints) {
+      process.stdout.write(`${checkpoint.id}\t${checkpoint.createdAt}\t${checkpoint.name}\n`);
+    }
   }
   return 0;
 }
@@ -124,7 +131,7 @@ async function main(argv: string[]): Promise<number> {
     case "checkpoint":
       return runCheckpoint(rest);
     case "list":
-      return runList();
+      return runList(rest);
     case "compare":
       return runCompare(rest);
     case undefined:
