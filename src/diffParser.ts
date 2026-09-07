@@ -42,3 +42,50 @@ export function parseNameStatus(raw: string): NameStatusEntry[] {
 
   return results;
 }
+
+export interface NumstatEntry {
+  path: string;
+  additions: number | null;
+  deletions: number | null;
+  binary: boolean;
+}
+
+/**
+ * Parses `git diff -z --numstat` output. Verified against real git 2.51.2
+ * output (see tests): non-rename records are `<added>\t<deleted>\t<path>\0`;
+ * binary records use `-\t-\t<path>\0`; rename records are
+ * `<added>\t<deleted>\t\0<oldpath>\0<newpath>\0` (empty third field before
+ * the two NUL-terminated paths).
+ */
+export function parseNumstat(raw: string): NumstatEntry[] {
+  const tokens = raw.split("\0");
+  if (tokens.at(-1) === "") {
+    tokens.pop();
+  }
+  const results: NumstatEntry[] = [];
+
+  let i = 0;
+  while (i < tokens.length) {
+    const record = tokens[i]!;
+    i++;
+    const [addedRaw, deletedRaw, pathField] = record.split("\t");
+
+    let path: string;
+    if (pathField === "") {
+      path = tokens[i + 1]!;
+      i += 2;
+    } else {
+      path = pathField!;
+    }
+
+    const binary = addedRaw === "-" && deletedRaw === "-";
+    results.push({
+      path,
+      additions: binary ? null : Number(addedRaw),
+      deletions: binary ? null : Number(deletedRaw),
+      binary,
+    });
+  }
+
+  return results;
+}
